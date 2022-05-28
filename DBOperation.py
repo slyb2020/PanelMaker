@@ -54,3 +54,21 @@ def GetSurfaceXParameterByTypeID(log, whichDB,typeID):
     temp = cursor.fetchone()  # 获得压条信息
     db.close()
     return 0, temp
+
+def GetSurfaceYParameterByTypeID(log, whichDB,typeID):
+    try:
+        db = MySQLdb.connect(host="%s" % dbHostName[whichDB], user='%s' % dbUserName[whichDB],
+                             passwd='%s' % dbPassword[whichDB], db='%s' % dbName[whichDB], charset='utf8')
+    except:
+        wx.MessageBox("无法连接%s!" % dbName[whichDB], "错误信息")
+        if log:
+            log.WriteText("无法连接%s!" % dbName[whichDB], colour=wx.RED)
+        return -1, []
+    cursor = db.cursor()
+    sql = """SELECT `Y面左侧折弯使能`,`Y面左侧折弯量`,`Y面右侧折弯使能`,`Y面右侧折弯量`,`Y面顶部折弯使能`,`Y面顶部折弯量`,
+    `Y面底部折弯使能`,`Y面底部折弯量`,`Y面底部折弯切除使能`,`Y面底部折弯切除量`,`Y面左侧延伸使能`,`Y面左侧延伸量`,
+    `Y面右侧延伸使能`,`Y面右侧延伸量`,`Y面左侧褶边使能`,`Y面右侧褶边使能`,`Y面底部离地使能`,`Y面底部离地高度`,`Y面材质`,`Y面颜色`  from `solidworksY面配置信息表` where `型号` = '%s' """%typeID
+    cursor.execute(sql)
+    temp = cursor.fetchone()  # 获得压条信息
+    db.close()
+    return 0, temp
