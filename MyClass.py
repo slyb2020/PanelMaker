@@ -8,40 +8,26 @@
 @time: 2019/6/16 14:05
 @desc:
 """
-from MyLog import MyLogCtrl
-import wx.lib.agw.pybusyinfo as PBI
-import time
-import wx.lib.agw.aquabutton as AB
-import wx.lib.agw.gradientbutton as GB
 # from OrderInfoEditDialog import *
 # from ScheduleDemoDialog import *
-import wx
 import wx.adv
-import wx.lib.agw.foldpanelbar as fpb
-import wx.lib.gizmos as gizmos  # Formerly wx.gizmos in Classic
-from six import BytesIO
-import images
-from ID_DEFINE import *
-import math
-import random
-import os
-import sys
-import images
-import wx.lib.agw.hypertreelist as HTL
-import random
-
+import wx.lib.agw.aquabutton as AB
 import wx.lib.agw.flatmenu as FM
-from wx.lib.agw.artmanager import ArtManager, RendererBase, DCSaver
-from wx.lib.agw.fmresources import ControlFocus, ControlPressed
-from wx.lib.agw.fmresources import FM_OPT_SHOW_CUSTOMIZE, FM_OPT_SHOW_TOOLBAR, FM_OPT_MINIBAR
-import datetime
-import wx.lib.scrolledpanel as scrolled
-from Wizard import *
-from ExcelOperation import ModifySurfaceXConfigurationExcelFile
+import wx.lib.agw.foldpanelbar as fpb
+import wx.lib.agw.pybusyinfo as PBI
+from six import BytesIO
 # from AVIShow import AVIShowPanel
 from wx.adv import AnimationCtrl
+from wx.lib.agw.artmanager import ArtManager, DCSaver
+from wx.lib.agw.fmresources import ControlFocus, ControlPressed
 
-from DBOperation import GetWallIDList,GetWallStructureByWallID,GetSurfaceXParameterByTypeID,GetSurfaceYParameterByTypeID
+from DBOperation import GetWallIDList, GetWallStructureByWallID, GetSurfaceXParameterByTypeID, \
+    GetSurfaceYParameterByTypeID,GetRockWoolParameterByTypeID
+from ExcelOperation import ModifySurfaceXConfigurationExcelFile,ModifySurfaceYConfigurationExcelFile,ModifyRockWoolConfigurationExcelFile
+from ID_DEFINE import *
+from MyLog import MyLogCtrl
+from Wizard import *
+
 
 # dirName = os.path.dirname(os.path.abspath(__file__))
 # bitmapDir = os.path.join(dirName, 'bitmaps\\')
@@ -436,32 +422,32 @@ class WallManagementPanel(wx.Panel):
 
     def OnCreateNewBTN(self,event):
         wizard = wiz(self, -1, "新墙板创建向导", images.WizTest1.GetBitmap())
-
-        self.page1 = WallParameterPage(wizard, self.log, "Page 1 墙板参数")
-        self.page2 = SurfaceXParameterPage(wizard, self, self.log, "Page 2 X 面参数")
-        self.page3 = SurfaceYParameterPage(wizard, self, self.log, "Page 3 Y 面参数")
-        self.page4 = RockWoolParameterPage(wizard, self, self.log, "Page 4 岩棉参数")
-        self.page5 = TitledPage(wizard, "Page 5 构件参数")
-        self.page6 = TitledPage(wizard, "Page 6 加强板参数")
+        self.page = []
+        self.pageWall = WallParameterPage(wizard, self, self.log, "Page 1 墙板参数")
+        self.pageX = SurfaceXParameterPage(wizard, self, self.log, "Page 2 X 面参数")
+        self.pageY = SurfaceYParameterPage(wizard, self, self.log, "Page 3 Y 面参数")
+        self.pageRockWool = RockWoolParameterPage(wizard, self, self.log, "Page 4 岩棉参数")
+        self.page.append(self.pageWall)
+        self.page.append(self.pageX)
+        self.page.append(self.pageY)
+        self.page.append(self.pageRockWool)
+        self.pageConstruction = TitledPage(wizard, "Page 5 构件参数")
+        self.pageReinforcement = TitledPage(wizard, "Page 6 加强板参数")
         # self.page1 = page1
 
-        wizard.FitToPage(self.page1)
-        self.page6.sizer.Add(wx.StaticText(self.page6, -1, "\nThis is the last page."))
+        wizard.FitToPage(self.page[0])
+        # self.page6.sizer.Add(wx.StaticText(self.page6, -1, "\nThis is the last page."))
 
         # Set the initial order of the pages
-        self.page1.SetNext(self.page2)
-        self.page2.SetPrev(self.page1)
-        self.page2.SetNext(self.page3)
-        self.page3.SetPrev(self.page2)
-        self.page3.SetNext(self.page4)
-        self.page4.SetPrev(self.page3)
-        self.page4.SetNext(self.page5)
-        self.page5.SetPrev(self.page5)
-        self.page5.SetNext(self.page6)
-        self.page6.SetPrev(self.page5)
+        self.page[0].SetNext(self.page[1])
+        self.page[1].SetPrev(self.page[0])
+        self.page[1].SetNext(self.page[2])
+        self.page[2].SetPrev(self.page[1])
+        self.page[2].SetNext(self.page[3])
+        self.page[3].SetPrev(self.page[2])
 
-        wizard.GetPageAreaSizer().Add(self.page1)
-        if wizard.RunWizard(self.page1):
+        wizard.GetPageAreaSizer().Add(self.page[0])
+        if wizard.RunWizard(self.page[0]):
             wx.MessageBox("墙板图纸已按照您输入的参数成功生成，请打开SolidWorks软件进行查看！", "信息提示")
         else:
             wx.MessageBox("墙板图纸因被操作员取消而没有被成功生成！", "信息提示")
@@ -496,16 +482,17 @@ class WallManagementPanel(wx.Panel):
             self.constructionPage=wx.Panel(self.notebook)
             self.notebook.AddPage(self.constructionPage, "构件参数")
         if self.wallStructureList[5]!="":
-            self.rockWoolPage=wx.Panel(self.notebook)
+            self.rockWoolPage=RockWoolParameterShowPanel(self.notebook,self.log,self.wallStructureList[1])
             self.notebook.AddPage(self.rockWoolPage, "岩棉参数")
         if self.wallStructureList[6]!="":
             self.reinforcementBoardPage=wx.Panel(self.notebook)
             self.notebook.AddPage(self.reinforcementBoardPage, "加强板参数")
 
 class WallParameterPage(TitledPage):
-    def __init__(self,parent,log,title):
+    def __init__(self,parent,master,log,title):
         super(WallParameterPage, self).__init__(parent,title)
         self.parent = parent
+        self.master = master
         self.log = log
         self.wallType = ""
         self.wallID = 1
@@ -528,20 +515,25 @@ class WallParameterPage(TitledPage):
         hhbox = wx.BoxSizer()
         hhbox.Add((30,-1))
 
-        hhbox.Add(wx.StaticText(self,label="请选择要新建的墙板类型：",size=(150,-1)),0,wx.TOP,5)
-        self.wallTypeCOMBO = wx.ComboBox(self, choices=["2SA",'2SG','2SF'], size=(100,25))
+        hhbox.Add(wx.StaticText(self,label="请输入新建墙板的类型及型号：A."),0,wx.TOP,5)
+        self.wallTypeCOMBO = wx.ComboBox(self, choices=["2SA",'2SG','2SF'], size=(80,25))
         self.wallTypeCOMBO.Bind(wx.EVT_COMBOBOX,self.OnWallTypeChanged)
         hhbox.Add(self.wallTypeCOMBO, 0)
+        hhbox.Add(wx.StaticText(self,label='.'),0,wx.TOP,5)
+        self.wallIDSPIN = wx.SpinCtrl(self,size=(100,-1),min=0,max=9999)
+        hhbox.Add(self.wallIDSPIN,0,wx.EXPAND)
         vvbox.Add((-1,10))
         vvbox.Add(hhbox,0,wx.EXPAND)
         self.panel = wx.Panel(self,size=(350,235))
-        vvbox.Add(self.panel,0,wx.EXPAND)
+        vvbox.Add(self.panel,1,wx.EXPAND)
         hbox.Add(vvbox,1,wx.EXPAND)
         self.sizer.Add(hbox,0,wx.EXPAND)
         self.SetSizer(self.sizer)
         self.panel.SetAutoLayout(1)
+        self.SetAutoLayout(1)
         self.Bind(wx.adv.EVT_WIZARD_PAGE_SHOWN,self.OnShowUp)
         self.Bind(wx.adv.EVT_WIZARD_BEFORE_PAGE_CHANGED,self.OnBeforeChanged)
+        self.Bind(wx.EVT_CHECKBOX, self.OnCheckBox)
         self.ReCreate()
 
     def OnBeforeChanged(self,event):
@@ -552,7 +544,19 @@ class WallParameterPage(TitledPage):
             self.wallTypeCOMBO.Refresh()
             event.Veto()
         else:
+            self.constuctionEnable = self.constuctionEnableCHK.GetValue()
+            self.reinforcementEnable = self.reinforcementEnableCHK.GetValue()
             self.wallTypeCOMBO.SetBackgroundColour(wx.WHITE)
+            self.master.page=[self.master.pageWall,self.master.pageX,self.master.pageY,self.master.pageRockWool]
+            if self.constuctionEnable:
+                self.master.page.append(self.master.pageConstruction)
+            if self.reinforcementEnable:
+                self.master.page.append(self.master.pageReinforcement)
+            self.master.page[0].SetNext(self.master.page[1])
+            for i in range(1,len(self.master.page)-1):
+                self.master.page[i].SetPrev(self.master.page[i-1])
+                self.master.page[i].SetNext(self.master.page[i+1])
+            self.master.page[-1].SetPrev(self.master.page[-2])
 
     def OnShowUp(self,event):
         try:
@@ -568,31 +572,31 @@ class WallParameterPage(TitledPage):
         if self.wallType!="":
             vbox=wx.BoxSizer(wx.VERTICAL)
             vbox.Add((-1,30))
-            self.surfaceXEnableCHK = wx.CheckBox(self.panel,label="X面",size=(80,-1))
+            self.surfaceXEnableCHK = wx.CheckBox(self.panel,label="X面",size=(80,-1),name="X面")
             self.surfaceXEnableCHK.SetValue(self.surfaceXEnable)
             vbox.Add(self.surfaceXEnableCHK,0,wx.LEFT,30)
             vbox.Add((-1,20))
-            self.surfaceYEnableCHK = wx.CheckBox(self.panel,label="Y面",size=(80,-1))
+            self.surfaceYEnableCHK = wx.CheckBox(self.panel,label="Y面",size=(80,-1),name="Y面")
             self.surfaceYEnableCHK.SetValue(self.surfaceYEnable)
             vbox.Add(self.surfaceYEnableCHK,0,wx.LEFT,30)
             vbox.Add((-1,20))
-            self.surfaceZEnableCHK = wx.CheckBox(self.panel,label="Z面",size=(80,-1))
+            self.surfaceZEnableCHK = wx.CheckBox(self.panel,label="Z面",size=(80,-1),name="Z面")
             self.surfaceZEnableCHK.SetValue(self.surfaceZEnable)
             vbox.Add(self.surfaceZEnableCHK,0,wx.LEFT,30)
             vbox.Add((-1,20))
-            self.surfaceVEnableCHK = wx.CheckBox(self.panel,label="V面",size=(80,-1))
+            self.surfaceVEnableCHK = wx.CheckBox(self.panel,label="V面",size=(80,-1),name="V面")
             self.surfaceVEnableCHK.SetValue(self.surfaceVEnable)
             vbox.Add(self.surfaceVEnableCHK,0,wx.LEFT,30)
             vbox.Add((-1,20))
-            self.rockWoolEnableCHK = wx.CheckBox(self.panel,label="岩棉",size=(80,-1))
+            self.rockWoolEnableCHK = wx.CheckBox(self.panel,label="岩棉",size=(80,-1),name="岩棉")
             self.rockWoolEnableCHK.SetValue(self.rockWoolEnable)
             vbox.Add(self.rockWoolEnableCHK,0,wx.LEFT,30)
             vbox.Add((-1,20))
-            self.constuctionEnableCHK = wx.CheckBox(self.panel,label="构件",size=(80,-1))
+            self.constuctionEnableCHK = wx.CheckBox(self.panel,label="构件",size=(80,-1),name="构件")
             self.constuctionEnableCHK.SetValue(self.constuctionEnable)
             vbox.Add(self.constuctionEnableCHK,0,wx.LEFT,30)
             vbox.Add((-1,20))
-            self.reinforcementEnableCHK = wx.CheckBox(self.panel,label="加强板",size=(80,-1))
+            self.reinforcementEnableCHK = wx.CheckBox(self.panel,label="加强板",size=(80,-1),name="加强板")
             self.reinforcementEnableCHK.SetValue(self.reinforcementEnable)
             vbox.Add(self.reinforcementEnableCHK,0,wx.LEFT,30)
             self.panel.SetSizer(vbox)
@@ -607,13 +611,17 @@ class WallParameterPage(TitledPage):
             self.wallID+=1
             wallID = "A.%s.%04d"%(self.wallType,self.wallID)
         self.wallIDSPIN.SetValue("%04d"%self.wallID)
-        # if wallID in existIDList:
-        #     self.wallIDSPIN.SetBackgroundColour(wx.Colour(200,120,120))
-        # else:
-        #     self.wallIDSPIN.SetBackgroundColour(wx.Colour(255,255,255))
+
     def OnWallTypeChanged(self,event):
         self.wallType=self.wallTypeCOMBO.GetValue()
         if self.wallType!="":
+            _, existIDList = GetWallIDList(self.log, WHICHDB, self.wallType)
+            wallID = "A.%s.%04d" % (self.wallType, self.wallID)
+            while wallID in existIDList:
+                self.wallID += 1
+                wallID = "A.%s.%04d"%(self.wallType,self.wallID)
+            self.wallIDSPIN.SetValue("%04d" % self.wallID)
+            self.wallIDSPIN.Show(True)
             self.wallTypeCOMBO.SetBackgroundColour(wx.WHITE)
             try:
                 self.animationCtrl.Destroy()
@@ -626,66 +634,19 @@ class WallParameterPage(TitledPage):
             self.animationCtrl.SetBackgroundColour(self.GetBackgroundColour())
             self.animationCtrl.Play()
         self.ReCreate()
+        self.Layout()
 
-    def OnPreViewBTN(self, event):
-        message = "正在处理请稍候..."
-        busy = PBI.PyBusyInfo(message, parent=None, title="系统忙提示",
-                              icon=images.Smiles.GetBitmap())
-
-        wx.Yield()
-        self.leftBendValue=self.leftBendSPIN.GetValue()
-        self.rightBendValue=self.rightBendSPIN.GetValue()
-        self.bottomBendValue=self.bottomBendSPIN.GetValue()
-        self.bottomBendCutValue=self.bottomBendCutSPIN.GetValue()
-        ModifySurfaceXConfigurationExcelFile(self.leftBendEnable,self.leftBendValue,self.rightBendEnable,self.rightBendValue,self.bottomBendEnable,self.bottomBendValue,self.bottomBendCutEnable,self.bottomBendCutValue)
-        # Part = swApp.OpenDoc6("D:\\WorkSpace\\Solidworks\\N.2SA\\SurfaceXSLDPRT.SLDPRT", 1, 0, "", longstatus, longwarnings)
-        # swApp.ActivateDoc2("SurfaceXSLDPRT.SLDPRT", False, longstatus)
-        # Part = swApp.ActiveDoc
-        del busy
+    def OnCheckBox(self,event):
+        obj = event.GetEventObject()
+        objName = obj.GetName()
+        if objName in ["X面","Y面","岩棉"]:
+            obj.SetValue(True)
+        elif objName in ["Z面","V面"]:
+            obj.SetValue(False)
+        else:
+            event.Skip()
 
 
-    def OnExistCOMBOChanged(self,event):
-        self.leftBendEnable=True
-        self.leftBendValue=7
-        self.rightBendEnable=True
-        self.rightBendValue=7
-        self.bottomBendEnable=True
-        self.bottomBendValue=12
-        self.bottomBendCutEnable=True
-        self.bottomBendCutValue=30
-        self.ReCreate()
-
-    def OnLeftBendEnableCHK(self,event):
-        self.leftBendEnable=self.leftBendEnableCHK.GetValue()
-        self.leftBendValue=self.leftBendSPIN.GetValue() if self.leftBendEnable else 0
-        self.ReCreate()
-
-    def OnRightBendEnableCHK(self,event):
-        self.rightBendEnable=self.rightBendEnableCHK.GetValue()
-        self.rightBendValue=self.rightBendSPIN.GetValue() if self.rightBendEnable else 0
-        self.ReCreate()
-
-    def OnColourEnableCHK(self,event):
-        self.colourEnable=self.colourEnableCHK.GetValue()
-        self.colour=self.colourCOMBO.GetValue() if self.colourEnable else ""
-        self.ReCreate()
-
-    def OnMaterialEnableCHK(self,event):
-        self.materialEnable=self.materialEnableCHK.GetValue()
-        self.material=self.materialCOMBO.GetValue() if self.materialEnable else ""
-        self.ReCreate()
-
-    def OnBottomBendEnableCHK(self,event):
-        self.bottomBendEnable=self.bottomBendEnableCHK.GetValue()
-        self.bottomBendValue=self.bottomBendSPIN.GetValue() if self.bottomBendEnable else 0
-        if not self.bottomBendEnable:
-            self.bottomBendCutEnable=False
-        self.ReCreate()
-
-    def OnBottomBendCutEnableCHK(self,event):
-        self.bottomBendCutEnable=self.bottomBendCutEnableCHK.GetValue()
-        self.bottomBendCut=self.bottomBendCutSPIN.GetValue() if self.bottomBendEnable and self.bottomBendCutEnable else 0
-        self.ReCreate()
 
 class SurfaceXParameterPage(TitledPage):
     def __init__(self,parent, master, log, title):
@@ -695,9 +656,9 @@ class SurfaceXParameterPage(TitledPage):
         self.baseFilename="SurfaceX"
         self.log = log
         self.leftBendEnable = False
-        self.leftBendValue=0
+        self.leftBendValue=7
         self.rightBendEnable = False
-        self.rightBendValue=0
+        self.rightBendValue=7
         self.bottomBendEnable=False
         self.bottomBendValue=0
         self.bottomBendCutEnable=False
@@ -738,7 +699,19 @@ class SurfaceXParameterPage(TitledPage):
         self.SetSizer(self.sizer)
         self.panel.SetAutoLayout(1)
         self.Bind(wx.adv.EVT_WIZARD_PAGE_SHOWN,self.OnShowUp)
+        self.Bind(wx.adv.EVT_WIZARD_BEFORE_PAGE_CHANGED,self.OnBeforeChanged)
         self.ReCreate()
+
+    def OnBeforeChanged(self,event):
+        self.leftBendValue=self.leftBendSPIN.GetValue()
+        self.rightBendValue=self.rightBendSPIN.GetValue()
+        self.topBendValue=self.topBendSPIN.GetValue()
+        self.bottomBendValue=self.bottomBendSPIN.GetValue()
+        self.bottomBendCutValue=self.bottomBendCutSPIN.GetValue()
+        ModifySurfaceXConfigurationExcelFile(self.leftBendEnable,self.leftBendValue,self.rightBendEnable,self.rightBendValue,self.topBendEnable,self.topBendValue,self.bottomBendEnable,self.bottomBendValue,self.bottomBendCutEnable,self.bottomBendCutValue)
+        # Part = swApp.OpenDoc6("D:\\WorkSpace\\Solidworks\\N.2SA\\SurfaceXSLDPRT.SLDPRT", 1, 0, "", longstatus, longwarnings)
+        # swApp.ActivateDoc2("SurfaceXSLDPRT.SLDPRT", False, longstatus)
+        # Part = swApp.ActiveDoc
 
     def GetPreviewPicName(self):
         num = 0
@@ -752,7 +725,7 @@ class SurfaceXParameterPage(TitledPage):
         self.previewPicName = self.baseFilename+"%05d.png"%num
 
     def OnShowUp(self,event):
-        _,choices = GetWallIDList(self.log, WHICHDB, self.master.page1.wallType)
+        _,choices = GetWallIDList(self.log, WHICHDB, self.master.page[0].wallType)
         self.existCOMOBO.SetItems(choices)
         self.ShowPreview()
 
@@ -770,6 +743,14 @@ class SurfaceXParameterPage(TitledPage):
         self.previewPanel.Thaw()
 
     def ReCreate(self):
+        try:
+            self.leftBendValue = self.leftBendSPIN.GetValue()
+            self.rightBendValue = self.rightBendSPIN.GetValue()
+            self.topBendValue = self.topBendSPIN.GetValue()
+            self.bottomBendValue = self.bottomBendSPIN.GetValue()
+            self.bottomBendCutValue = self.bottomBendCutSPIN.GetValue()
+        except:
+            pass
         self.panel.Freeze()
         self.panel.DestroyChildren()
         vbox = wx.BoxSizer(wx.VERTICAL)
@@ -777,6 +758,7 @@ class SurfaceXParameterPage(TitledPage):
         hhbox=wx.BoxSizer()
         hhbox.Add((10, 1))
         self.leftBendEnableCHK = wx.CheckBox(self.panel,label="有左侧折弯",size=(120,-1))
+        self.leftBendEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnLeftBendEnableCHK)
         self.leftBendEnableCHK.SetValue(self.leftBendEnable)
         hhbox.Add(self.leftBendEnableCHK,0,wx.TOP,5)
         self.leftBendEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnLeftBendEnableCHK)
@@ -784,7 +766,7 @@ class SurfaceXParameterPage(TitledPage):
         self.leftBendLabel.Show(self.leftBendEnable)
         hhbox.Add(self.leftBendLabel,0,wx.TOP,5)
         self.leftBendSPIN = wx.SpinCtrl(self.panel,size=(100,-1),min=1,max=50)
-        self.leftBendSPIN.SetValue(7)
+        self.leftBendSPIN.SetValue(self.leftBendValue)
         self.leftBendSPIN.Show(self.leftBendEnable)
         hhbox.Add(self.leftBendSPIN,1,wx.RIGHT,10)
         vbox.Add(hhbox, 0, wx.EXPAND)
@@ -794,6 +776,7 @@ class SurfaceXParameterPage(TitledPage):
         hhbox=wx.BoxSizer()
         hhbox.Add((10, 1))
         self.rightBendEnableCHK = wx.CheckBox(self.panel,label="有右侧折弯",size=(120,-1))
+        self.rightBendEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnRightBendEnableCHK)
         self.rightBendEnableCHK.SetValue(self.rightBendEnable)
         hhbox.Add(self.rightBendEnableCHK,0,wx.TOP,5)
         self.rightBendEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnRightBendEnableCHK)
@@ -801,7 +784,7 @@ class SurfaceXParameterPage(TitledPage):
         self.rightBendLabel.Show(self.rightBendEnable)
         hhbox.Add(self.rightBendLabel,0,wx.TOP,5)
         self.rightBendSPIN = wx.SpinCtrl(self.panel,size=(100,-1),min=1,max=50)
-        self.rightBendSPIN.SetValue(7)
+        self.rightBendSPIN.SetValue(self.rightBendValue)
         self.rightBendSPIN.Show(self.rightBendEnable)
         hhbox.Add(self.rightBendSPIN,1,wx.RIGHT,10)
         vbox.Add(hhbox, 0, wx.EXPAND)
@@ -811,6 +794,7 @@ class SurfaceXParameterPage(TitledPage):
         hhbox = wx.BoxSizer()
         hhbox.Add((10,1))
         self.bottomBendEnableCHK = wx.CheckBox(self.panel,label="有底部折弯",size=(120,-1))
+        self.bottomBendEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnBottomBendEnableCHK)
         self.bottomBendEnableCHK.SetValue(self.bottomBendEnable)
         hhbox.Add(self.bottomBendEnableCHK,0,wx.TOP,5)
         self.bottomBendEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnBottomBendEnableCHK)
@@ -818,7 +802,7 @@ class SurfaceXParameterPage(TitledPage):
         self.bottomBendLabel.Show(self.bottomBendEnable)
         hhbox.Add(self.bottomBendLabel,0,wx.TOP,5)
         self.bottomBendSPIN = wx.SpinCtrl(self.panel,size=(100,-1),min=0,max=50)
-        self.bottomBendSPIN.SetValue(12)
+        self.bottomBendSPIN.SetValue(self.bottomBendValue)
         self.bottomBendSPIN.Show(self.bottomBendEnable)
         hhbox.Add(self.bottomBendSPIN,1,wx.RIGHT,10)
         vbox.Add(hhbox,0,wx.EXPAND)
@@ -846,6 +830,7 @@ class SurfaceXParameterPage(TitledPage):
         hhbox = wx.BoxSizer()
         hhbox.Add((10,1))
         self.topBendEnableCHK = wx.CheckBox(self.panel,label="有顶部折弯",size=(120,-1))
+        self.topBendEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnTopBendEnableCHK)
         self.topBendEnableCHK.SetValue(self.topBendEnable)
         hhbox.Add(self.topBendEnableCHK,0,wx.TOP,5)
         self.topBendEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnTopBendEnableCHK)
@@ -853,7 +838,7 @@ class SurfaceXParameterPage(TitledPage):
         self.topBendLabel.Show(self.topBendEnable)
         hhbox.Add(self.topBendLabel,0,wx.TOP,5)
         self.topBendSPIN = wx.SpinCtrl(self.panel,size=(100,-1),min=0,max=50)
-        self.topBendSPIN.SetValue(12)
+        self.topBendSPIN.SetValue(self.topBendValue)
         self.topBendSPIN.Show(self.topBendEnable)
         hhbox.Add(self.topBendSPIN,1,wx.RIGHT,10)
         vbox.Add(hhbox,0,wx.EXPAND)
@@ -990,16 +975,39 @@ class SurfaceYParameterPage(SurfaceXParameterPage):
         self.bottomRaiseValue = 0
         super(SurfaceYParameterPage, self).__init__(parent,master,log,title)
         self.baseFilename = "SurfaceY"
+        self.Bind(wx.adv.EVT_WIZARD_BEFORE_PAGE_CHANGED,self.OnBeforeChanged)
+        self.ReCreate()
+
+    def OnBeforeChanged(self,event):
+        self.leftBendValue=self.leftBendSPIN.GetValue()
+        self.rightBendValue=self.rightBendSPIN.GetValue()
+        self.topBendValue=self.topBendSPIN.GetValue()
+        self.bottomBendValue=self.bottomBendSPIN.GetValue()
+        self.bottomBendCutValue=self.bottomBendCutSPIN.GetValue()
+        self.bottomRaiseValue=self.bottomRaiseSPIN.GetValue()
+        ModifySurfaceYConfigurationExcelFile(self.leftBendEnable,self.leftBendValue,self.rightBendEnable,self.rightBendValue,self.topBendEnable,self.topBendValue,self.bottomBendEnable,self.bottomBendValue,self.bottomBendCutEnable,self.bottomBendCutValue,self.bottomRaiseEnable,self.bottomRaiseValue,self.leftSelvedgeEnable,self.rightSelvedgeEnable)
 
     def ReCreate(self):
+        try:
+            self.leftBendValue = self.leftBendSPIN.GetValue()
+            self.rightBendValue = self.rightBendSPIN.GetValue()
+            self.topBendValue = self.topBendSPIN.GetValue()
+            self.bottomBendValue = self.bottomBendSPIN.GetValue()
+            self.bottomBendCutValue = self.bottomBendCutSPIN.GetValue()
+            self.leftExtendValue = self.leftExtendSPIN.GetValue()
+            self.rightExtendValue = self.rightExtendSPIN.GetValue()
+            self.bottomRaiseValue = self.bottomRaiseSPIN.GetValue()
+        except:
+            pass
         self.panel.Freeze()
         self.panel.DestroyChildren()
         vbox = wx.BoxSizer(wx.VERTICAL)
         hhbox=wx.BoxSizer()
         hhbox.Add((5, 1))
-        self.leftExtenEnableCHK = wx.CheckBox(self.panel,label="有左侧延伸",size=(120,-1))
-        self.leftExtenEnableCHK.SetValue(self.leftExtendEnable)
-        hhbox.Add(self.leftExtenEnableCHK,0,wx.TOP,5)
+        self.leftExtendEnableCHK = wx.CheckBox(self.panel, label="有左侧延伸", size=(120, -1))
+        self.leftExtendEnableCHK.Bind(wx.EVT_CHECKBOX, self.OnLeftExtendEnableCHK)
+        self.leftExtendEnableCHK.SetValue(self.leftExtendEnable)
+        hhbox.Add(self.leftExtendEnableCHK, 0, wx.TOP, 5)
         self.leftExtendLabel=wx.StaticText(self.panel,label="Y面左侧延伸量：",size=(100,-1))
         self.leftExtendLabel.Show(self.leftExtendEnable)
         hhbox.Add(self.leftExtendLabel,0,wx.TOP,5)
@@ -1014,6 +1022,7 @@ class SurfaceYParameterPage(SurfaceXParameterPage):
         hhbox=wx.BoxSizer()
         hhbox.Add((5, 1))
         self.leftBendEnableCHK = wx.CheckBox(self.panel,label="有左侧折弯",size=(120,-1))
+        self.leftBendEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnLeftBendEnableCHK)
         self.leftBendEnableCHK.SetValue(self.leftBendEnable)
         hhbox.Add(self.leftBendEnableCHK,0,wx.TOP,5)
         self.leftBendLabel=wx.StaticText(self.panel,label="Y面左侧折弯量：",size=(100,-1))
@@ -1030,10 +1039,12 @@ class SurfaceYParameterPage(SurfaceXParameterPage):
         hhbox=wx.BoxSizer()
         hhbox.Add((5, 1))
         self.leftSelvedgeEnableCHK = wx.CheckBox(self.panel,label="有左侧褶边",size=(120,-1))
-        self.leftSelvedgeEnableCHK.SetValue(self.leftBendEnable)
+        self.leftSelvedgeEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnLeftSelvedgeEnableCHK)
+        self.leftSelvedgeEnableCHK.SetValue(self.leftSelvedgeEnable)
         hhbox.Add(self.leftSelvedgeEnableCHK,0,wx.TOP,5)
         self.rightSelvedgeEnableCHK = wx.CheckBox(self.panel,label="有右侧褶边",size=(120,-1))
-        self.rightSelvedgeEnableCHK.SetValue(self.rightBendEnable)
+        self.rightSelvedgeEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnRightSelvedgeEnableCHK)
+        self.rightSelvedgeEnableCHK.SetValue(self.rightSelvedgeEnable)
         hhbox.Add(self.rightSelvedgeEnableCHK,0,wx.TOP,5)
         vbox.Add(hhbox, 0, wx.EXPAND)
 
@@ -1041,15 +1052,16 @@ class SurfaceYParameterPage(SurfaceXParameterPage):
 
         hhbox=wx.BoxSizer()
         hhbox.Add((5, 1))
-        self.rightExtenEnableCHK = wx.CheckBox(self.panel,label="有右侧延伸",size=(120,-1))
-        self.rightExtenEnableCHK.SetValue(self.rightExtendEnable)
-        hhbox.Add(self.rightExtenEnableCHK,0,wx.TOP,5)
+        self.rightExtendEnableCHK = wx.CheckBox(self.panel,label="有右侧延伸",size=(120,-1))
+        self.rightExtendEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnRightExtendEnableCHK)
+        self.rightExtendEnableCHK.SetValue(self.rightExtendEnable)
+        hhbox.Add(self.rightExtendEnableCHK,0,wx.TOP,5)
         self.rightExtendLabel=wx.StaticText(self.panel,label="Y面右侧延伸量：",size=(100,-1))
         self.rightExtendLabel.Show(self.rightExtendEnable)
         hhbox.Add(self.rightExtendLabel,0,wx.TOP,5)
         self.rightExtendSPIN = wx.SpinCtrl(self.panel,size=(100,-1),min=1,max=50)
         self.rightExtendSPIN.SetValue(self.rightExtendValue)
-        self.rightExtendSPIN.Show(self.rightBendEnable)
+        self.rightExtendSPIN.Show(self.rightExtendEnable)
         hhbox.Add(self.rightExtendSPIN,1,wx.RIGHT,10)
         vbox.Add(hhbox, 0, wx.EXPAND)
 
@@ -1058,6 +1070,7 @@ class SurfaceYParameterPage(SurfaceXParameterPage):
         hhbox=wx.BoxSizer()
         hhbox.Add((5, 1))
         self.rightBendEnableCHK = wx.CheckBox(self.panel,label="有右侧折弯",size=(120,-1))
+        self.rightBendEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnRightBendEnableCHK)
         self.rightBendEnableCHK.SetValue(self.rightBendEnable)
         hhbox.Add(self.rightBendEnableCHK,0,wx.TOP,5)
         self.rightBendLabel=wx.StaticText(self.panel,label="Y面右侧折弯量：",size=(100,-1))
@@ -1074,6 +1087,7 @@ class SurfaceYParameterPage(SurfaceXParameterPage):
         hhbox=wx.BoxSizer()
         hhbox.Add((5, 1))
         self.topBendEnableCHK = wx.CheckBox(self.panel,label="有顶部折弯",size=(120,-1))
+        self.topBendEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnTopBendEnableCHK)
         self.topBendEnableCHK.SetValue(self.topBendEnable)
         hhbox.Add(self.topBendEnableCHK,0,wx.TOP,5)
         self.topBendLabel=wx.StaticText(self.panel,label="Y面顶部折弯量：",size=(100,-1))
@@ -1090,6 +1104,7 @@ class SurfaceYParameterPage(SurfaceXParameterPage):
         hhbox = wx.BoxSizer()
         hhbox.Add((5,1))
         self.bottomRaiseEnableCHK = wx.CheckBox(self.panel,label="有Y面底部离地",size=(120,-1))
+        self.bottomRaiseEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnBottomRaiseEnableCHK)
         self.bottomRaiseEnableCHK.SetValue(self.bottomRaiseEnable)
         hhbox.Add(self.bottomRaiseEnableCHK,0,wx.TOP,5)
         self.bottomRaiseLabel=wx.StaticText(self.panel,label="底部离地高度：",size=(100,-1))
@@ -1106,6 +1121,7 @@ class SurfaceYParameterPage(SurfaceXParameterPage):
         hhbox = wx.BoxSizer()
         hhbox.Add((5,1))
         self.bottomBendEnableCHK = wx.CheckBox(self.panel,label="有底部折弯",size=(120,-1))
+        self.bottomBendEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnBottomBendEnableCHK)
         self.bottomBendEnableCHK.SetValue(self.bottomBendEnable)
         hhbox.Add(self.bottomBendEnableCHK,0,wx.TOP,5)
         self.bottomBendLabel=wx.StaticText(self.panel,label="底部折弯量：",size=(100,-1))
@@ -1122,6 +1138,7 @@ class SurfaceYParameterPage(SurfaceXParameterPage):
         hhbox = wx.BoxSizer()
         hhbox.Add((5,1))
         self.bottomBendCutEnableCHK = wx.CheckBox(self.panel,label="有底部折弯裁切",size=(120,-1))
+        self.bottomBendCutEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnBottomBendCutEnableCHK)
         self.bottomBendCutEnableCHK.SetValue(self.bottomBendCutEnable)
         self.bottomBendCutEnableCHK.Show(self.bottomBendEnable)
         hhbox.Add(self.bottomBendCutEnableCHK,0,wx.TOP,5)
@@ -1139,6 +1156,7 @@ class SurfaceYParameterPage(SurfaceXParameterPage):
         hhbox = wx.BoxSizer()
         hhbox.Add((5,1))
         self.colourEnableCHK = wx.CheckBox(self.panel,label="指定颜色",size=(120,-1))
+        self.colourEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnColourEnableCHK)
         self.colourEnableCHK.SetValue(self.colourEnable)
         hhbox.Add(self.colourEnableCHK,0,wx.TOP,5)
         self.colourLabel=wx.StaticText(self.panel,label="Y面颜色：",size=(100,-1))
@@ -1154,6 +1172,7 @@ class SurfaceYParameterPage(SurfaceXParameterPage):
         hhbox = wx.BoxSizer()
         hhbox.Add((5,1))
         self.materialEnableCHK = wx.CheckBox(self.panel,label="默认材质",size=(120,-1))
+        self.materialEnableCHK.Bind(wx.EVT_CHECKBOX, self.OnMaterialEnableCHK)
         self.materialEnableCHK.SetValue(self.materialEnable)
         hhbox.Add(self.materialEnableCHK,0,wx.TOP,10)
         self.materialLabel=wx.StaticText(self.panel,label="Y面材质：",size=(60,-1))
@@ -1180,7 +1199,7 @@ class SurfaceYParameterPage(SurfaceXParameterPage):
         self.rightBendValue=self.rightBendSPIN.GetValue()
         self.bottomBendValue=self.bottomBendSPIN.GetValue()
         self.bottomBendCutValue=self.bottomBendCutSPIN.GetValue()
-        ModifySurfaceYConfigurationExcelFile(self.leftBendEnable,self.leftBendValue,self.rightBendEnable,self.rightBendValue,self.bottomBendEnable,self.bottomBendValue,self.bottomBendCutEnable,self.bottomBendCutValue)
+        ModifySurfaceYConfigurationExcelFile(self.leftBendEnable,self.leftBendValue,self.rightBendEnable,self.rightBendValue,self.topBendEnable,self.topBendValue,self.bottomBendEnable,self.bottomBendValue,self.bottomBendCutEnable,self.bottomBendCutValue,self.bottomRaiseEnable,self.bottomRaiseValue,self.leftSelvedgeEnable,self.rightSelvedgeEnable)
         # Part = swApp.OpenDoc6("D:\\WorkSpace\\Solidworks\\N.2SA\\SurfaceXSLDPRT.SLDPRT", 1, 0, "", longstatus, longwarnings)
         # swApp.ActivateDoc2("SurfaceXSLDPRT.SLDPRT", False, longstatus)
         # Part = swApp.ActiveDoc
@@ -1216,23 +1235,57 @@ class SurfaceYParameterPage(SurfaceXParameterPage):
         self.ShowPreview()
         self.ReCreate()
 
+    def OnLeftExtendEnableCHK(self,event):
+        self.leftExtendEnable=self.leftExtendEnableCHK.GetValue()
+        self.leftExtendValue=self.leftExtendSPIN.GetValue() if self.leftExtendEnable else 0
+        self.ShowPreview()
+        self.ReCreate()
+
+    def OnRightExtendEnableCHK(self,event):
+        self.rightExtendEnable=self.rightExtendEnableCHK.GetValue()
+        self.rightExtendValue=self.rightExtendSPIN.GetValue() if self.rightExtendEnable else 0
+        self.ShowPreview()
+        self.ReCreate()
+
+    def OnLeftSelvedgeEnableCHK(self,event):
+        self.leftSelvedgeEnable = self.leftSelvedgeEnableCHK.GetValue()
+        self.ShowPreview()
+        self.ReCreate()
+
+    def OnRightSelvedgeEnableCHK(self,event):
+        self.rightSelvedgeEnable = self.rightSelvedgeEnableCHK.GetValue()
+        self.ShowPreview()
+        self.ReCreate()
+
+    def OnBottomBendCutEnableCHK(self,event):
+        self.bottomBendCutEnable = self.bottomBendCutEnableCHK.GetValue()
+        self.ShowPreview()
+        self.ReCreate()
+
+    def OnBottomRaiseEnableCHK(self,event):
+        self.bottomRaiseEnable = self.bottomRaiseEnableCHK.GetValue()
+        self.ShowPreview()
+        self.ReCreate()
+
+
+
 class RockWoolParameterPage(SurfaceXParameterPage):
     def __init__(self,parent, master, log, title):
-        self.bottomRaiseEnable = False
-        self.bottomRaiseValue = 0
-        self.baseFilename="SurfaceY"
-        self.leftExtendEnable = False
-        self.leftExtendValue = 0
-        self.leftSelvedgeEnable = False
-        self.rightExtendEnable = False
-        self.rightExtendValue = 0
-        self.rightSelvedgeEnable = False
-        self.bottomBendCutEnable=False
-        self.bottomBendCutValue = 0
+        self.leftSlotEnable = False
+        self.leftSlotDepthValue = 0
+        self.rightSlotEnable = False
+        self.rightSlotDepthValue = 0
+        self.topSlotEnable = False
+        self.topSlotDepthValue = 0
+        self.bottomSlotEnable = False
+        self.bottomSlotDepthValue = 0
         self.bottomRaiseEnable = False
         self.bottomRaiseValue = 0
         super(RockWoolParameterPage, self).__init__(parent,master,log,title)
-        self.baseFilename = "RockWool"
+        self.baseFilename="RockWool"
+
+    def OnBeforeChanged(self,event):
+        pass
 
     def ReCreate(self):
         self.panel.Freeze()
@@ -1240,144 +1293,86 @@ class RockWoolParameterPage(SurfaceXParameterPage):
         vbox = wx.BoxSizer(wx.VERTICAL)
         hhbox=wx.BoxSizer()
         hhbox.Add((5, 1))
-        self.leftExtenEnableCHK = wx.CheckBox(self.panel,label="有左侧延伸",size=(120,-1))
-        self.leftExtenEnableCHK.Enable(False)
-        self.leftExtenEnableCHK.SetValue(self.leftExtendEnable)
-        hhbox.Add(self.leftExtenEnableCHK,0,wx.TOP,5)
-        self.leftExtendLabel=wx.StaticText(self.panel,label="Y面左侧延伸量：",size=(100,-1))
-        self.leftExtendLabel.Show(self.leftExtendEnable)
-        hhbox.Add(self.leftExtendLabel,0,wx.TOP,5)
-        self.leftExtendSPIN = wx.SpinCtrl(self.panel,size=(100,-1),min=1,max=50)
-        self.leftExtendSPIN.SetValue(self.leftExtendValue)
-        self.leftExtendSPIN.Show(self.leftExtendEnable)
-        self.leftExtendSPIN.Enable(False)
-        hhbox.Add(self.leftExtendSPIN,1,wx.RIGHT,10)
+        self.leftSlotEnableCHK = wx.CheckBox(self.panel,label="有左侧开槽",size=(120,-1))
+        self.leftSlotEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnLeftSlotEnableCHK)
+        self.leftSlotEnableCHK.SetValue(self.leftSlotEnable)
+        hhbox.Add(self.leftSlotEnableCHK,0,wx.TOP,5)
+        self.leftSlotLabel=wx.StaticText(self.panel,label="左侧开槽深度：",size=(100,-1))
+        self.leftSlotLabel.Show(self.leftSlotEnable)
+        hhbox.Add(self.leftSlotLabel,0,wx.TOP,5)
+        self.leftSlotSPIN = wx.SpinCtrl(self.panel,size=(100,-1),min=1,max=50)
+        self.leftSlotSPIN.SetValue(self.leftSlotDepthValue)
+        self.leftSlotSPIN.Show(self.leftSlotEnable)
+        hhbox.Add(self.leftSlotSPIN,1,wx.RIGHT,10)
         vbox.Add(hhbox, 0, wx.EXPAND)
 
         vbox.Add((-1,10))
 
         hhbox=wx.BoxSizer()
         hhbox.Add((5, 1))
-        self.leftBendEnableCHK = wx.CheckBox(self.panel,label="有左侧折弯",size=(120,-1))
-        self.leftBendEnableCHK.SetValue(self.leftBendEnable)
-        hhbox.Add(self.leftBendEnableCHK,0,wx.TOP,5)
-        self.leftBendLabel=wx.StaticText(self.panel,label="Y面左侧折弯量：",size=(100,-1))
-        self.leftBendLabel.Show(self.leftBendEnable)
-        hhbox.Add(self.leftBendLabel,0,wx.TOP,5)
-        self.leftBendSPIN = wx.SpinCtrl(self.panel,size=(100,-1),min=1,max=50)
-        self.leftBendSPIN.SetValue(self.leftBendValue)
-        self.leftBendSPIN.Show(self.leftBendEnable)
-        hhbox.Add(self.leftBendSPIN,1,wx.RIGHT,10)
+        self.rightSlotEnableCHK = wx.CheckBox(self.panel,label="有右侧侧开槽",size=(120,-1))
+        self.rightSlotEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnRightSlotEnableCHK)
+        self.rightSlotEnableCHK.SetValue(self.rightSlotEnable)
+        hhbox.Add(self.rightSlotEnableCHK,0,wx.TOP,5)
+        self.rightSlotLabel=wx.StaticText(self.panel,label="右侧开槽深度：",size=(100,-1))
+        self.rightSlotLabel.Show(self.rightSlotEnable)
+        hhbox.Add(self.rightSlotLabel,0,wx.TOP,5)
+        self.rightSlotSPIN = wx.SpinCtrl(self.panel,size=(100,-1),min=1,max=50)
+        self.rightSlotSPIN.SetValue(self.rightSlotDepthValue)
+        self.rightSlotSPIN.Show(self.rightSlotEnable)
+        hhbox.Add(self.rightSlotSPIN,1,wx.RIGHT,10)
         vbox.Add(hhbox, 0, wx.EXPAND)
 
         vbox.Add((-1,10))
 
         hhbox=wx.BoxSizer()
         hhbox.Add((5, 1))
-        self.leftSelvedgeEnableCHK = wx.CheckBox(self.panel,label="有左侧褶边",size=(120,-1))
-        self.leftSelvedgeEnableCHK.SetValue(self.leftBendEnable)
-        hhbox.Add(self.leftSelvedgeEnableCHK,0,wx.TOP,5)
-        self.rightSelvedgeEnableCHK = wx.CheckBox(self.panel,label="有右侧褶边",size=(120,-1))
-        self.rightSelvedgeEnableCHK.SetValue(self.rightBendEnable)
-        hhbox.Add(self.rightSelvedgeEnableCHK,0,wx.TOP,5)
+        self.topSlotEnableCHK = wx.CheckBox(self.panel,label="有顶部开槽",size=(120,-1))
+        self.topSlotEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnTopSlotEnableCHK)
+        self.topSlotEnableCHK.SetValue(self.topSlotEnable)
+        hhbox.Add(self.topSlotEnableCHK,0,wx.TOP,5)
+        self.topSlotLabel=wx.StaticText(self.panel,label="顶部开槽深度：",size=(100,-1))
+        self.topSlotLabel.Show(self.topSlotEnable)
+        hhbox.Add(self.topSlotLabel,0,wx.TOP,5)
+        self.topSlotSPIN = wx.SpinCtrl(self.panel,size=(100,-1),min=1,max=50)
+        self.topSlotSPIN.SetValue(self.topSlotDepthValue)
+        self.topSlotSPIN.Show(self.topSlotEnable)
+        hhbox.Add(self.topSlotSPIN,1,wx.RIGHT,10)
         vbox.Add(hhbox, 0, wx.EXPAND)
 
         vbox.Add((-1,10))
 
         hhbox=wx.BoxSizer()
         hhbox.Add((5, 1))
-        self.rightExtenEnableCHK = wx.CheckBox(self.panel,label="有右侧延伸",size=(120,-1))
-        self.rightExtenEnableCHK.SetValue(self.rightExtendEnable)
-        hhbox.Add(self.rightExtenEnableCHK,0,wx.TOP,5)
-        self.rightExtendLabel=wx.StaticText(self.panel,label="Y面右侧延伸量：",size=(100,-1))
-        self.rightExtendLabel.Show(self.rightExtendEnable)
-        hhbox.Add(self.rightExtendLabel,0,wx.TOP,5)
-        self.rightExtendSPIN = wx.SpinCtrl(self.panel,size=(100,-1),min=1,max=50)
-        self.rightExtendSPIN.SetValue(self.rightExtendValue)
-        self.rightExtendSPIN.Show(self.rightBendEnable)
-        hhbox.Add(self.rightExtendSPIN,1,wx.RIGHT,10)
+        self.bottomSlotEnableCHK = wx.CheckBox(self.panel,label="有底部开槽",size=(120,-1))
+        self.bottomSlotEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnBottomSlotEnableCHK)
+        self.bottomSlotEnableCHK.SetValue(self.bottomSlotEnable)
+        hhbox.Add(self.bottomSlotEnableCHK,0,wx.TOP,5)
+        self.bottomSlotLabel=wx.StaticText(self.panel,label="底部开槽深度：",size=(100,-1))
+        self.bottomSlotLabel.Show(self.bottomSlotEnable)
+        hhbox.Add(self.bottomSlotLabel,0,wx.TOP,5)
+        self.bottomSlotSPIN = wx.SpinCtrl(self.panel,size=(100,-1),min=1,max=50)
+        self.bottomSlotSPIN.SetValue(self.bottomSlotDepthValue)
+        self.bottomSlotSPIN.Show(self.bottomSlotEnable)
+        hhbox.Add(self.bottomSlotSPIN,1,wx.RIGHT,10)
         vbox.Add(hhbox, 0, wx.EXPAND)
 
         vbox.Add((-1,10))
 
         hhbox=wx.BoxSizer()
         hhbox.Add((5, 1))
-        self.rightBendEnableCHK = wx.CheckBox(self.panel,label="有右侧折弯",size=(120,-1))
-        self.rightBendEnableCHK.SetValue(self.rightBendEnable)
-        hhbox.Add(self.rightBendEnableCHK,0,wx.TOP,5)
-        self.rightBendLabel=wx.StaticText(self.panel,label="Y面右侧折弯量：",size=(100,-1))
-        self.rightBendLabel.Show(self.rightBendEnable)
-        hhbox.Add(self.rightBendLabel,0,wx.TOP,5)
-        self.rightBendSPIN = wx.SpinCtrl(self.panel,size=(100,-1),min=1,max=50)
-        self.rightBendSPIN.SetValue(self.rightBendValue)
-        self.rightBendSPIN.Show(self.rightBendEnable)
-        hhbox.Add(self.rightBendSPIN,1,wx.RIGHT,10)
-        vbox.Add(hhbox, 0, wx.EXPAND)
-
-        vbox.Add((-1,10))
-
-        hhbox=wx.BoxSizer()
-        hhbox.Add((5, 1))
-        self.topBendEnableCHK = wx.CheckBox(self.panel,label="有顶部折弯",size=(120,-1))
-        self.topBendEnableCHK.SetValue(self.topBendEnable)
-        hhbox.Add(self.topBendEnableCHK,0,wx.TOP,5)
-        self.topBendLabel=wx.StaticText(self.panel,label="Y面顶部折弯量：",size=(100,-1))
-        self.topBendLabel.Show(self.topBendEnable)
-        hhbox.Add(self.topBendLabel,0,wx.TOP,5)
-        self.topBendSPIN = wx.SpinCtrl(self.panel,size=(100,-1),min=1,max=50)
-        self.topBendSPIN.SetValue(self.topBendValue)
-        self.topBendSPIN.Show(self.topBendEnable)
-        hhbox.Add(self.topBendSPIN,1,wx.RIGHT,10)
-        vbox.Add(hhbox, 0, wx.EXPAND)
-
-        vbox.Add((-1,10))
-
-        hhbox = wx.BoxSizer()
-        hhbox.Add((5,1))
-        self.bottomRaiseEnableCHK = wx.CheckBox(self.panel,label="有Y面底部离地",size=(120,-1))
+        self.bottomRaiseEnableCHK = wx.CheckBox(self.panel,label="有底部离地",size=(120,-1))
+        self.bottomRaiseEnableCHK.Bind(wx.EVT_CHECKBOX,self.OnBottomRaiseEnableCHK)
         self.bottomRaiseEnableCHK.SetValue(self.bottomRaiseEnable)
         hhbox.Add(self.bottomRaiseEnableCHK,0,wx.TOP,5)
         self.bottomRaiseLabel=wx.StaticText(self.panel,label="底部离地高度：",size=(100,-1))
         self.bottomRaiseLabel.Show(self.bottomRaiseEnable)
         hhbox.Add(self.bottomRaiseLabel,0,wx.TOP,5)
-        self.bottomRaiseSPIN = wx.SpinCtrl(self.panel,size=(100,-1),min=0,max=50)
+        self.bottomRaiseSPIN = wx.SpinCtrl(self.panel,size=(100,-1),min=1,max=50)
         self.bottomRaiseSPIN.SetValue(self.bottomRaiseValue)
         self.bottomRaiseSPIN.Show(self.bottomRaiseEnable)
         hhbox.Add(self.bottomRaiseSPIN,1,wx.RIGHT,10)
-        vbox.Add(hhbox,0,wx.EXPAND)
-
-        vbox.Add((-1,10))
-
-        hhbox = wx.BoxSizer()
-        hhbox.Add((5,1))
-        self.bottomBendEnableCHK = wx.CheckBox(self.panel,label="有底部折弯",size=(120,-1))
-        self.bottomBendEnableCHK.SetValue(self.bottomBendEnable)
-        hhbox.Add(self.bottomBendEnableCHK,0,wx.TOP,5)
-        self.bottomBendLabel=wx.StaticText(self.panel,label="底部折弯量：",size=(100,-1))
-        self.bottomBendLabel.Show(self.bottomBendEnable)
-        hhbox.Add(self.bottomBendLabel,0,wx.TOP,5)
-        self.bottomBendSPIN = wx.SpinCtrl(self.panel,size=(100,-1),min=0,max=50)
-        self.bottomBendSPIN.SetValue(self.bottomBendValue)
-        self.bottomBendSPIN.Show(self.bottomBendEnable)
-        hhbox.Add(self.bottomBendSPIN,1,wx.RIGHT,10)
-        vbox.Add(hhbox,0,wx.EXPAND)
-
-        vbox.Add((-1,10))
-
-        hhbox = wx.BoxSizer()
-        hhbox.Add((5,1))
-        self.bottomBendCutEnableCHK = wx.CheckBox(self.panel,label="有底部折弯裁切",size=(120,-1))
-        self.bottomBendCutEnableCHK.SetValue(self.bottomBendCutEnable)
-        self.bottomBendCutEnableCHK.Show(self.bottomBendEnable)
-        hhbox.Add(self.bottomBendCutEnableCHK,0,wx.TOP,5)
-        self.bottomBendCutLabel=wx.StaticText(self.panel,label="底部折弯裁切量：",size=(100,-1))
-        self.bottomBendCutLabel.Show(self.bottomBendEnable and self.bottomBendCutEnable)
-        hhbox.Add(self.bottomBendCutLabel,0,wx.TOP,5)
-        self.bottomBendCutSPIN = wx.SpinCtrl(self.panel,size=(100,-1),min=0,max=50)
-        self.bottomBendCutSPIN.SetValue(self.bottomBendCutValue)
-        self.bottomBendCutSPIN.Show(self.bottomBendEnable and self.bottomBendCutEnable)
-        hhbox.Add(self.bottomBendCutSPIN,1,wx.RIGHT,10)
-        vbox.Add(hhbox,0,wx.EXPAND)
+        vbox.Add(hhbox, 0, wx.EXPAND)
 
         vbox.Add((-1,10))
 
@@ -1415,17 +1410,68 @@ class RockWoolParameterPage(SurfaceXParameterPage):
         self.panel.Layout()
         self.panel.Thaw()
 
+    def OnLeftSlotEnableCHK(self,event):
+        self.leftSlotEnable = self.leftSlotEnableCHK.GetValue()
+        self.leftSlotDepthValue=self.leftSlotSPIN.GetValue() if self.leftSlotEnable else 0
+        self.rightSlotDepthValue=self.rightSlotSPIN.GetValue() if self.rightSlotEnable else 0
+        self.topSlotDepthValue=self.topSlotSPIN.GetValue() if self.topSlotEnable else 0
+        self.bottomSlotDepthValue=self.bottomSlotSPIN.GetValue() if self.bottomSlotEnable else 0
+        self.bottomRaiseDepthValue=self.bottomRaiseSPIN.GetValue() if self.bottomRaiseEnable else 0
+        self.ShowPreview()
+        self.ReCreate()
+
+    def OnRightSlotEnableCHK(self,event):
+        self.rightSlotEnable = self.rightSlotEnableCHK.GetValue()
+        self.leftSlotDepthValue=self.leftSlotSPIN.GetValue() if self.leftSlotEnable else 0
+        self.rightSlotDepthValue=self.rightSlotSPIN.GetValue() if self.rightSlotEnable else 0
+        self.topSlotDepthValue=self.topSlotSPIN.GetValue() if self.topSlotEnable else 0
+        self.bottomSlotDepthValue=self.bottomSlotSPIN.GetValue() if self.bottomSlotEnable else 0
+        self.bottomRaiseDepthValue=self.bottomRaiseSPIN.GetValue() if self.bottomRaiseEnable else 0
+        self.ShowPreview()
+        self.ReCreate()
+
+    def OnTopSlotEnableCHK(self,event):
+        self.topSlotEnable = self.topSlotEnableCHK.GetValue()
+        self.leftSlotDepthValue=self.leftSlotSPIN.GetValue() if self.leftSlotEnable else 0
+        self.rightSlotDepthValue=self.rightSlotSPIN.GetValue() if self.rightSlotEnable else 0
+        self.topSlotDepthValue=self.topSlotSPIN.GetValue() if self.topSlotEnable else 0
+        self.bottomSlotDepthValue=self.bottomSlotSPIN.GetValue() if self.bottomSlotEnable else 0
+        self.bottomRaiseDepthValue=self.bottomRaiseSPIN.GetValue() if self.bottomRaiseEnable else 0
+        self.ShowPreview()
+        self.ReCreate()
+
+    def OnBottomSlotEnableCHK(self,event):
+        self.bottomSlotEnable = self.bottomSlotEnableCHK.GetValue()
+        self.leftSlotDepthValue=self.leftSlotSPIN.GetValue() if self.leftSlotEnable else 0
+        self.rightSlotDepthValue=self.rightSlotSPIN.GetValue() if self.rightSlotEnable else 0
+        self.topSlotDepthValue=self.topSlotSPIN.GetValue() if self.topSlotEnable else 0
+        self.bottomSlotDepthValue=self.bottomSlotSPIN.GetValue() if self.bottomSlotEnable else 0
+        self.bottomRaiseDepthValue=self.bottomRaiseSPIN.GetValue() if self.bottomRaiseEnable else 0
+        self.ShowPreview()
+        self.ReCreate()
+
+    def OnBottomRaiseEnableCHK(self,event):
+        self.bottomRaiseEnable = self.bottomRaiseEnableCHK.GetValue()
+        self.leftSlotDepthValue=self.leftSlotSPIN.GetValue() if self.leftSlotEnable else 0
+        self.rightSlotDepthValue=self.rightSlotSPIN.GetValue() if self.rightSlotEnable else 0
+        self.topSlotDepthValue=self.topSlotSPIN.GetValue() if self.topSlotEnable else 0
+        self.bottomSlotDepthValue=self.bottomSlotSPIN.GetValue() if self.bottomSlotEnable else 0
+        self.bottomRaiseDepthValue=self.bottomRaiseSPIN.GetValue() if self.bottomRaiseEnable else 0
+        self.ShowPreview()
+        self.ReCreate()
+
     def OnPreViewBTN(self, event):
         message = "正在处理请稍候..."
         busy = PBI.PyBusyInfo(message, parent=None, title="系统忙提示",
                               icon=images.Smiles.GetBitmap())
 
         wx.Yield()
-        self.leftBendValue=self.leftBendSPIN.GetValue()
-        self.rightBendValue=self.rightBendSPIN.GetValue()
-        self.bottomBendValue=self.bottomBendSPIN.GetValue()
-        self.bottomBendCutValue=self.bottomBendCutSPIN.GetValue()
-        ModifySurfaceYConfigurationExcelFile(self.leftBendEnable,self.leftBendValue,self.rightBendEnable,self.rightBendValue,self.bottomBendEnable,self.bottomBendValue,self.bottomBendCutEnable,self.bottomBendCutValue)
+        self.leftSlotDepthValue = self.leftSlotSPIN.GetValue()
+        self.rightSlotDepthValue = self.rightSlotSPIN.GetValue()
+        self.topSlotDepthValue = self.topSlotSPIN.GetValue()
+        self.bottomSlotDepthValue = self.bottomSlotSPIN.GetValue()
+        self.bottomRaiseValue = self.bottomRaiseSPIN.GetValue()
+        ModifyRockWoolConfigurationExcelFile(self.leftSlotEnable,self.leftSlotDepthValue,self.rightSlotEnable,self.rightSlotDepthValue,self.topSlotEnable,self.topSlotDepthValue,self.bottomSlotEnable,self.bottomSlotDepthValue,self.bottomRaiseEnable,self.bottomRaiseValue)
         # Part = swApp.OpenDoc6("D:\\WorkSpace\\Solidworks\\N.2SA\\SurfaceXSLDPRT.SLDPRT", 1, 0, "", longstatus, longwarnings)
         # swApp.ActivateDoc2("SurfaceXSLDPRT.SLDPRT", False, longstatus)
         # Part = swApp.ActiveDoc
@@ -1433,31 +1479,23 @@ class RockWoolParameterPage(SurfaceXParameterPage):
 
     def OnExistCOMBOChanged(self,event):
         wallID = self.existCOMOBO.GetValue()
-        _,result=GetSurfaceYParameterByTypeID(self.log,WHICHDB,wallID)
-        self.leftBendEnable = True if result[0]=='U' else False
-        self.leftBendValue=result[1]
-        self.rightBendEnable = True if result[2]=='U' else False
-        self.rightBendValue=result[3]
-        self.topBendEnable = True if result[4]=='U' else False
-        self.topBendValue=result[5]
-        self.bottomBendEnable=True if result[6]=='U' else False
-        self.bottomBendValue=result[7]
-        self.bottomBendCutEnable=True if result[8]=='U' else False
-        self.bottomBendCutValue = result[9]
-        self.leftExtendEnable=True if result[10]=='U' else False
-        self.leftExtendValue = result[11]
-        self.rightExtendEnable=True if result[12]=='U' else False
-        self.rightExtendValue = result[13]
-        self.leftSelvedgeEnable=True if result[14]=='U' else False
-        self.rightSelvedgeEnable=True if result[15]=='U' else False
-        self.bottomRaiseEnable=True if result[16]=='U' else False
-        self.bottomRaiseValue = result[17]
-        if result[17] != "":
+        _,result=GetRockWoolParameterByTypeID(self.log,WHICHDB,wallID)
+        self.leftSlotEnable = True if result[0]=='U' else False
+        self.leftSlotDepthValue=result[1]
+        self.rightSlotEnable = True if result[2]=='U' else False
+        self.rightSlotDepthValue=result[3]
+        self.topSlotEnable = True if result[4]=='U' else False
+        self.topSlotDepthValue=result[5]
+        self.bottomSlotEnable = True if result[6]=='U' else False
+        self.bottomSlotDepthValue=result[7]
+        self.bottomRaiseEnable = True if result[8]=='U' else False
+        self.bottomRaiseValue=result[9]
+        if result[10] != "":
             self.materialEnable = True
-            self.material = result[18]
-        if result[18] != "":
+            self.material = result[10]
+        if result[11] != "":
             self.colourEnable = True
-            self.colour = result[19]
+            self.colour = result[11]
         self.ShowPreview()
         self.ReCreate()
 
@@ -1637,20 +1675,14 @@ class SurfaceYParameterShowPanel(wx.Panel):
         self.parent = parent
         self.log=log
         self.wallID = wallID
-        self.leftExtendEnable = False
-        self.leftExtendValue = 0
-        self.leftBendEnable = False
-        self.leftBendValue=0
-        self.leftSelvedgeEnable = False
-        self.rightExtendEnable = False
-        self.rightExtendValue = 0
-        self.rightBendEnable = False
-        self.rightBendValue=0
-        self.rightSelvedgeEnable = False
-        self.bottomBendEnable=False
-        self.bottomBendValue=0
-        self.bottomBendCutEnable=False
-        self.bottomBendCutValue = 0
+        self.leftSlotEnable = False
+        self.leftSlotDepthValue = 0
+        self.rightSlotEnable = False
+        self.rightSlotDepthValue=0
+        self.topSlotEnable = False
+        self.topSlotDepthValue=0
+        self.bottomSlotEnable=False
+        self.bottomSlotDepthValue = 0
         self.bottomRaiseEnable = False
         self.bottomRaiseValue = 0
 
@@ -1659,7 +1691,7 @@ class SurfaceYParameterShowPanel(wx.Panel):
         self.colourEnable=False
         self.colour=""
 
-        _,result=GetSurfaceYParameterByTypeID(self.log,WHICHDB,self.wallID)
+        _,result=GetSurfaceYParameterByTypeID(self.log,WHICHDB,wallID)
         self.leftBendEnable = True if result[0]=='U' else False
         self.leftBendValue=result[1]
         self.rightBendEnable = True if result[2]=='U' else False
@@ -1733,7 +1765,7 @@ class SurfaceYParameterShowPanel(wx.Panel):
         hhbox.Add(self.leftSelvedgeEnableCHK,0,wx.TOP,5)
         self.rightSelvedgeEnableCHK = wx.CheckBox(self,label="有右侧褶边",size=(120,-1))
         self.rightSelvedgeEnableCHK.Enable(False)
-        self.rightSelvedgeEnableCHK.SetValue(self.rightBendEnable)
+        self.rightSelvedgeEnableCHK.SetValue(self.rightSelvedgeEnable)
         hhbox.Add(self.rightSelvedgeEnableCHK,0,wx.TOP,5)
         vbox.Add(hhbox, 0, wx.EXPAND)
 
@@ -1844,6 +1876,160 @@ class SurfaceYParameterShowPanel(wx.Panel):
         self.bottomBendCutSPIN.SetValue(self.bottomBendCutValue)
         self.bottomBendCutSPIN.Show(self.bottomBendEnable and self.bottomBendCutEnable)
         hhbox.Add(self.bottomBendCutSPIN,1,wx.RIGHT,10)
+        vbox.Add(hhbox,0,wx.EXPAND)
+
+        vbox.Add((-1,10))
+
+        hhbox = wx.BoxSizer()
+        hhbox.Add((5,1))
+        self.colourEnableCHK = wx.CheckBox(self,label="指定颜色",size=(120,-1))
+        self.colourEnableCHK.Enable(False)
+        self.colourEnableCHK.SetValue(self.colourEnable)
+        hhbox.Add(self.colourEnableCHK,0,wx.TOP,5)
+        self.colourLabel=wx.StaticText(self,label="Y面颜色：",size=(100,-1))
+        self.colourLabel.Show(self.colourEnable)
+        hhbox.Add(self.colourLabel,0,wx.TOP,5)
+        self.colourCOMBO = wx.ComboBox(self,choices=["1","2","3","4","5","6","7","8"],size=(100,-1))
+        self.colourCOMBO.Enable(False)
+        self.colourCOMBO.Show(self.colourEnable)
+        hhbox.Add(self.colourCOMBO,1,wx.RIGHT,10)
+        vbox.Add(hhbox,0,wx.EXPAND)
+
+        vbox.Add((-1,10))
+
+        hhbox = wx.BoxSizer()
+        hhbox.Add((5,1))
+        self.materialEnableCHK = wx.CheckBox(self,label="默认材质",size=(120,-1))
+        self.materialEnableCHK.Enable(False)
+        self.materialEnableCHK.SetValue(self.materialEnable)
+        hhbox.Add(self.materialEnableCHK,0,wx.TOP,10)
+        self.materialLabel=wx.StaticText(self,label="Y面材质：",size=(60,-1))
+        self.materialLabel.Show(self.materialEnable)
+        hhbox.Add(self.materialLabel,0,wx.TOP,10)
+        self.materialCOMBO = wx.ComboBox(self,choices=[],size=(100,-1))
+        self.materialCOMBO.SetValue(self.material)
+        self.materialCOMBO.Enable(False)
+        self.materialCOMBO.Show(self.materialEnable)
+        hhbox.Add(self.materialCOMBO,1,wx.TOP,5)
+        vbox.Add(hhbox,0,wx.EXPAND|wx.RIGHT,10)
+
+
+        self.SetSizer(vbox)
+        self.Layout()
+        self.Thaw()
+
+class RockWoolParameterShowPanel(wx.Panel):
+    def __init__(self,parent,log,wallID):
+        wx.Panel.__init__(self, parent)
+        self.parent = parent
+        self.log=log
+        self.wallID = wallID
+        self.leftSlotEnable = False
+        self.leftSlotDepthValue = 0
+        self.rightSlotEnable = False
+        self.rightSlotDepthValue=0
+        self.topSlotEnable = False
+        self.topSlotDepthValue=0
+        self.bottomSlotEnable=False
+        self.bottomSlotDepthValue = 0
+        self.bottomRaiseEnable = False
+        self.bottomRaiseValue = 0
+
+        self.materialEnable = False
+        self.material = ""
+        self.colourEnable=False
+        self.colour=""
+
+        _,result=GetRockWoolParameterByTypeID(self.log,WHICHDB,self.wallID)
+        self.leftSlotEnable = True if result[0]=='U' else False
+        self.leftSlotDepthValue=result[1]
+        self.rightSlotEnable = True if result[2]=='U' else False
+        self.rightSlotDepthValue=result[3]
+        self.topSlotEnable = True if result[4]=='U' else False
+        self.topSlotDepthValue=result[5]
+        self.bottomSlotEnable=True if result[6]=='U' else False
+        self.bottomSlotDepthValue=result[7]
+        self.bottomRaiseEnable=True if result[8]=='U' else False
+        self.bottomRaiseValue = result[9]
+        if result[10] != "":
+            self.materialEnable = True
+            self.material = result[10]
+        if result[11] != "":
+            self.colourEnable = True
+            self.colour = result[11]
+        self.Freeze()
+        vbox = wx.BoxSizer(wx.VERTICAL)
+
+        vbox.Add((-1,10))
+
+        hhbox=wx.BoxSizer()
+        hhbox.Add((5, 1))
+        self.leftSlotEnableCHK = wx.CheckBox(self,label="有左侧开槽",size=(120,-1))
+        self.leftSlotEnableCHK.Enable(False)
+        self.leftSlotEnableCHK.SetValue(self.leftSlotEnable)
+        hhbox.Add(self.leftSlotEnableCHK,0,wx.TOP,5)
+        self.leftSlotLabel=wx.StaticText(self,label="左侧开槽深度：",size=(100,-1))
+        self.leftSlotLabel.Show(self.leftSlotEnable)
+        hhbox.Add(self.leftSlotLabel,0,wx.TOP,5)
+        self.leftSlotDepthSPIN = wx.SpinCtrl(self,size=(100,-1),min=1,max=50)
+        self.leftSlotDepthSPIN.SetValue(self.leftSlotDepthValue)
+        self.leftSlotDepthSPIN.Show(self.leftSlotEnable)
+        self.leftSlotDepthSPIN.Enable(False)
+        hhbox.Add(self.leftSlotDepthSPIN,1,wx.RIGHT,10)
+        vbox.Add(hhbox, 0, wx.EXPAND)
+
+        vbox.Add((-1,10))
+
+        hhbox=wx.BoxSizer()
+        hhbox.Add((5, 1))
+        self.rightSlotEnableCHK = wx.CheckBox(self,label="有右侧开槽",size=(120,-1))
+        self.rightSlotEnableCHK.Enable(False)
+        self.rightSlotEnableCHK.SetValue(self.rightSlotEnable)
+        hhbox.Add(self.rightSlotEnableCHK,0,wx.TOP,5)
+        self.rightSlotLabel=wx.StaticText(self,label="右侧开槽深度：",size=(100,-1))
+        self.rightSlotLabel.Show(self.rightSlotEnable)
+        hhbox.Add(self.rightSlotLabel,0,wx.TOP,5)
+        self.rightSlotDepthSPIN = wx.SpinCtrl(self,size=(100,-1),min=1,max=50)
+        self.rightSlotDepthSPIN.SetValue(self.rightSlotDepthValue)
+        self.rightSlotDepthSPIN.Show(self.rightSlotEnable)
+        self.rightSlotDepthSPIN.Enable(False)
+        hhbox.Add(self.rightSlotDepthSPIN,1,wx.RIGHT,10)
+        vbox.Add(hhbox, 0, wx.EXPAND)
+
+        vbox.Add((-1,10))
+
+        hhbox=wx.BoxSizer()
+        hhbox.Add((5, 1))
+        self.topSlotEnableCHK = wx.CheckBox(self,label="有顶部开槽",size=(120,-1))
+        self.topSlotEnableCHK.Enable(False)
+        self.topSlotEnableCHK.SetValue(self.topSlotEnable)
+        hhbox.Add(self.topSlotEnableCHK,0,wx.TOP,5)
+        self.topSlotLabel=wx.StaticText(self,label="顶部开槽深度：",size=(100,-1))
+        self.topSlotLabel.Show(self.topSlotEnable)
+        hhbox.Add(self.topSlotLabel,0,wx.TOP,5)
+        self.topSlotDepthSPIN = wx.SpinCtrl(self,size=(100,-1),min=1,max=50)
+        self.topSlotDepthSPIN.Enable(False)
+        self.topSlotDepthSPIN.SetValue(self.topSlotDepthValue)
+        self.topSlotDepthSPIN.Show(self.topSlotEnable)
+        hhbox.Add(self.topSlotDepthSPIN,1,wx.RIGHT,10)
+        vbox.Add(hhbox, 0, wx.EXPAND)
+
+        vbox.Add((-1,10))
+
+        hhbox = wx.BoxSizer()
+        hhbox.Add((5,1))
+        self.bottomRaiseEnableCHK = wx.CheckBox(self,label="有Y面底部离地",size=(120,-1))
+        self.bottomRaiseEnableCHK.Enable(False)
+        self.bottomRaiseEnableCHK.SetValue(self.bottomRaiseEnable)
+        hhbox.Add(self.bottomRaiseEnableCHK,0,wx.TOP,5)
+        self.bottomRaiseLabel=wx.StaticText(self,label="底部离地高度：",size=(100,-1))
+        self.bottomRaiseLabel.Show(self.bottomRaiseEnable)
+        hhbox.Add(self.bottomRaiseLabel,0,wx.TOP,5)
+        self.bottomRaiseSPIN = wx.SpinCtrl(self,size=(100,-1),min=0,max=50)
+        self.bottomRaiseSPIN.Enable(False)
+        self.bottomRaiseSPIN.SetValue(self.bottomRaiseValue)
+        self.bottomRaiseSPIN.Show(self.bottomRaiseEnable)
+        hhbox.Add(self.bottomRaiseSPIN,1,wx.RIGHT,10)
         vbox.Add(hhbox,0,wx.EXPAND)
 
         vbox.Add((-1,10))

@@ -72,3 +72,20 @@ def GetSurfaceYParameterByTypeID(log, whichDB,typeID):
     temp = cursor.fetchone()  # 获得压条信息
     db.close()
     return 0, temp
+
+def GetRockWoolParameterByTypeID(log, whichDB,typeID):
+    try:
+        db = MySQLdb.connect(host="%s" % dbHostName[whichDB], user='%s' % dbUserName[whichDB],
+                             passwd='%s' % dbPassword[whichDB], db='%s' % dbName[whichDB], charset='utf8')
+    except:
+        wx.MessageBox("无法连接%s!" % dbName[whichDB], "错误信息")
+        if log:
+            log.WriteText("无法连接%s!" % dbName[whichDB], colour=wx.RED)
+        return -1, []
+    cursor = db.cursor()
+    sql = """SELECT `左侧开槽使能`,`左侧开槽深度`,`右侧开槽使能`,`右侧开槽深度`,`顶部开槽使能`,`顶部开槽深度`,
+    `底部开槽使能`,`底部开槽深度`,`底部离地使能`,`底部离地高度`,`材质`,`颜色`  from `solidworks岩棉配置信息表` where `型号` = '%s' """%typeID
+    cursor.execute(sql)
+    temp = cursor.fetchone()  # 获得压条信息
+    db.close()
+    return 0, temp

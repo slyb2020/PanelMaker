@@ -2,6 +2,9 @@
 # _*_ coding: UTF-8 _*_
 from MyClass import *
 from ID_DEFINE import *
+import wx.adv
+import wx.lib.agw.aquabutton as AB
+import wx.lib.agw.flatmenu as FM
 
 
 
@@ -62,7 +65,7 @@ class FlatMenuFrame(wx.Frame):
 
     def CreateMenu(self):
         # Create the menubar
-        self._mb = FM.FlatMenuBar(self, wx.ID_ANY, 48, 5, options=FM_OPT_SHOW_TOOLBAR)
+        self._mb = FM.FlatMenuBar(self, wx.ID_ANY, 48, 5, options=FM.FM_OPT_SHOW_TOOLBAR)
         fileMenu = FM.FlatMenu()
         fileMenuOut = FM.FlatMenu()
         setupMenu = FM.FlatMenu()
