@@ -76,3 +76,28 @@ def ModifyRockWoolConfigurationExcelFile(leftSlotEnable,leftSlotDepthValue,right
     ws['L3'] = bottomSlotDepthValue if bottomSlotEnable else 0
     ws['M3'] = bottomRaiseValue if bottomRaiseEnable else 0
     wb.save('D:\\WorkSpace\\Solidworks\\N.2SA\\岩棉配置表.xlsx')
+
+
+def ModifyReinforcementConfigurationExcelFile(bottomReinforcementEnable, middleReinforcementEnable,
+                                          topReinforcementEnable, a, b, c, d, e, f,
+                                          bottomX1, bottomX2, middleX1, middleX2, topX1,
+                                          topX2):
+    wb = openpyxl.load_workbook("D:\\WorkSpace\\Solidworks\\N.2SA\\加强板配置表.xlsx")
+    ws = wb.get_sheet_by_name("Sheet1")
+    ws['D3'] = 'U' if bottomReinforcementEnable else "S"
+    ws['E3'] = 'U' if middleReinforcementEnable else "S"
+    ws['F3'] = 'U' if topReinforcementEnable else "S"
+    ws['G3'] = a if bottomReinforcementEnable else 0
+    ws['H3'] = b if bottomReinforcementEnable else 0
+    ws['I3'] = c if middleReinforcementEnable else 0
+    ws['J3'] = d if middleReinforcementEnable else 0
+    ws['K3'] = e if topReinforcementEnable else 0
+    ws['L3'] = f if topReinforcementEnable else 0
+    ws['M3'] = bottomX1 if bottomReinforcementEnable else 0
+    ws['N3'] = bottomX2 if bottomReinforcementEnable else 0
+    ws['O3'] = middleX1 if middleReinforcementEnable else 0
+    ws['P3'] = middleX2 if middleReinforcementEnable else 0
+    ws['Q3'] = topX1 if topReinforcementEnable else 0
+    ws['R3'] = topX2 if topReinforcementEnable else 0
+    wb.save('D:\\WorkSpace\\Solidworks\\N.2SA\\加强板配置表.xlsx')
+
